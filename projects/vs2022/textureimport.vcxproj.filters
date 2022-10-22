@@ -1,0 +1,175 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="gpuformat">
+      <UniqueIdentifier>{0eccfe63-c13d-41f6-94e3-88124f89d16a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cputexture">
+      <UniqueIdentifier>{e8504734-1896-497e-9352-a5f01cecca3a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="textureimport">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\teximp\teximp.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\config.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\utilities.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\texture_importer_factory.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\bitmap\bitmap_importer.teximp.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\dds\dds.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\dds\dds_importer.teximp.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\exr\exr_importer.openexr.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\jpeg\jpeg_importer.libjpeg_turbo.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\ktx\ktx.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\ktx\ktx_importer.teximp.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\png\png_importer.libpng.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\targa\targa_importer.teximp.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\tiff\tiff_importer.tiff.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\config.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\converter.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\definitions.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\fwd.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\sampler.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\shared_texture.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\texture_operations.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\texture_view.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\unique_texture.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\utility.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\bitmap_importer.teximp.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\dds_importer.teximp.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\exr_importer.openexr.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\jpeg_importer.libjpeg_turbo.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ktx_importer.teximp.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png_importer.libpng.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\targa_importer.teximp.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\teximp.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\tiff_importer.tiff.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\src\astc.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\src\bc.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\src\decompress.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\src\etc.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\src\pvrtc.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\src\sample.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\src\write.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\thirdparty\astc_dec\astc_dec\astc_decomp.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\thirdparty\DirectXTex\DirectXTex\BC6HBC7.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\thirdparty\PowerVR_SDK\PowerVR\PVRTDecompress.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\thirdparty\swiftshader\switftshader\ETC_Decoder.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\cputexture\src\converter.cpp">
+      <Filter>cputexture</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\cputexture\src\sampler.cpp">
+      <Filter>cputexture</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\cputexture\src\shared_texture.cpp">
+      <Filter>cputexture</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\cputexture\src\texture_operations.cpp">
+      <Filter>cputexture</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\cputexture\src\unique_texture.cpp">
+      <Filter>cputexture</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\texture_importer_factory.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\src\info.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\gpuformat\src\limits.cpp">
+      <Filter>gpuformat</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
