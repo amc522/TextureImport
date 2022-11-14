@@ -4,6 +4,7 @@
 #include <teximp/config.h>
 #include <tl/expected.hpp>
 
+#include <array>
 #include <filesystem>
 #include <functional>
 #include <istream>
@@ -45,6 +46,7 @@ enum class FileFormat
     Tiff,
 #endif
     Count,
+    Undefined
 };
 
 #ifdef TEXIMP_ENABLE_BITMAP
@@ -53,6 +55,11 @@ enum class BitmapImporterBackend
 #ifdef TEXIMP_ENABLE_BITMAP_BACKEND_TEXIMP
     TexImp,
 #endif
+
+#ifdef TEXIMP_ENABLE_BITMAP_BACKEND_WIC
+    Wic,
+#endif
+
     Default = 0
 };
 #endif
@@ -167,7 +174,7 @@ constexpr int kMaxTextureHeight = 16384;
 struct TextureImportOptions
 {
     bool padRgbWithAlpha = true;
-    bool assume_sRGB = true;
+    bool assumeSrgb = true;
 };
 
 enum class TextureImportStatus
@@ -191,8 +198,40 @@ enum class TextureImportError
     UnknownFormat,
     UnsupportedFeature,
     ConversionError,
+    InvalidTextureAllocatorFormatLayout,
+    InvalidTextureAllocatorFormat,
     TextureAllocationFailed,
+    UnknownFileFormat,
     Unknown
+};
+
+enum class FormatLayout
+{
+    _4_4,
+    _4_4_4_4,
+    _5_6_5,
+    _5_5_5_1,
+    _8,
+    _8_8,
+    _8_8_8,
+    _8_8_8_8,
+    _9_9_9_5,
+    _10_10_10_2,
+    _11_11_10,
+    _16,
+    _16_16,
+    _16_16_16,
+    _16_16_16_16,
+    _32,
+    _32_32,
+    _32_32_32,
+    _32_32_32_32,
+#ifndef GF_EXCLUDE_64BIT_FORMATS
+    _64,
+    _64_64,
+    _64_64_64,
+    _64_64_64_64,
+#endif
 };
 
 [[nodiscard]] std::span<FileFormat> supportedFileFormats() noexcept;
@@ -216,6 +255,16 @@ class ITextureAllocator
 {
 public:
     virtual ~ITextureAllocator() = default;
+
+    virtual FormatLayout selectFormatLayout(FormatLayout nativeFormatLayout,
+                                            std::span<const FormatLayout> /*additionalLayout*/)
+    {
+        return nativeFormatLayout;
+    }
+    virtual gpufmt::Format selectFormat(FormatLayout /*formatLayout*/, std::span<const gpufmt::Format> availableFormats)
+    {
+        return availableFormats.front();
+    }
 
     virtual void preAllocation(std::optional<int> textureCount) = 0;
     virtual bool allocateTexture(const TextureParams& textureParams, int textureIndex) = 0;
@@ -262,6 +311,9 @@ public:
     TextureImportError error() const;
     const std::string& errorMessage() const;
 
+    ITextureAllocator* textureAllocator() { return mTextureAllocator; }
+    const ITextureAllocator* textureAllocator() const { return mTextureAllocator; }
+
 protected:
     TextureImporter() = default;
     TextureImporter(std::filesystem::path filePath);
@@ -273,6 +325,8 @@ protected:
     void setError(TextureImportError error, const std::string& errorMessage);
     void setError(TextureImportError error, std::string&& errorMessage);
     void setTextureAllocationError(const TextureParams& textureParams);
+    void setTextureAllocatorFormatLayoutError(FormatLayout formatLayout);
+    void setTextureAllocatorFormatError(gpufmt::Format format);
 
 private:
     friend class TextureImporterFactory;
@@ -283,6 +337,7 @@ protected:
     TextureImportStatus mStatus = TextureImportStatus::Loading;
     TextureImportError mError = TextureImportError::None;
     std::string mErrorMessage;
+    ITextureAllocator* mTextureAllocator = nullptr;
 };
 
 struct TextureImportResult
@@ -291,13 +346,13 @@ struct TextureImportResult
     DefaultTextureAllocator textureAllocator;
 };
 
-[[nodiscard]] tl::expected<TextureImportResult, TextureImportError>
-importTexture(const std::filesystem::path& filePath, TextureImportOptions options = {},
-              PreferredBackends preferredBackends = {});
+[[nodiscard]] TextureImportResult importTexture(const std::filesystem::path& filePath,
+                                                TextureImportOptions options = {},
+                                                PreferredBackends preferredBackends = {});
 
-tl::expected<std::unique_ptr<TextureImporter>, TextureImportError>
-importTexture(const std::filesystem::path& filePath, ITextureAllocator& textureAllocator,
-              TextureImportOptions options = {}, PreferredBackends preferredBackends = {});
+std::unique_ptr<TextureImporter> importTexture(const std::filesystem::path& filePath,
+                                               ITextureAllocator& textureAllocator, TextureImportOptions options = {},
+                                               PreferredBackends preferredBackends = {});
 
 template<class T>
 [[nodiscard]] constexpr std::span<T> castWritableBytes(std::span<std::byte> bytes) noexcept

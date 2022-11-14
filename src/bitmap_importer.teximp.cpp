@@ -161,21 +161,22 @@ void BitmapTexImpImporter::load(std::istream& stream, ITextureAllocator& texture
 
     switch(headerSize)
     {
-    case sizeof(BitmapHeaderV2): loadV2(stream, textureAllocator); break;
-    case sizeof(BitmapHeaderV3): loadV3(stream, textureAllocator); break;
-    case sizeof(BitmapHeaderV3_52): loadV3_52(stream, textureAllocator); break;
-    case sizeof(BitmapHeaderV3_56): loadV3_56(stream, textureAllocator); break;
-    case sizeof(BitmapHeaderV4): loadV4(stream, textureAllocator); break;
-    case sizeof(BitmapHeaderV5): loadV5(stream, textureAllocator); break;
-    case sizeof(BitmapHeaderOs2V2_16): loadOs2V2_16(stream, textureAllocator); break;
-    case sizeof(BitmapHeaderOs2V2): loadOs2V2(stream, textureAllocator); break;
+    case sizeof(BitmapHeaderV2): loadV2(stream, textureAllocator, options); break;
+    case sizeof(BitmapHeaderV3): loadV3(stream, textureAllocator, options); break;
+    case sizeof(BitmapHeaderV3_52): loadV3_52(stream, textureAllocator, options); break;
+    case sizeof(BitmapHeaderV3_56): loadV3_56(stream, textureAllocator, options); break;
+    case sizeof(BitmapHeaderV4): loadV4(stream, textureAllocator, options); break;
+    case sizeof(BitmapHeaderV5): loadV5(stream, textureAllocator, options); break;
+    case sizeof(BitmapHeaderOs2V2_16): loadOs2V2_16(stream, textureAllocator, options); break;
+    case sizeof(BitmapHeaderOs2V2): loadOs2V2(stream, textureAllocator, options); break;
     default:
         setError(TextureImportError::CouldNotReadHeader, std::format("Unrecognized header size '{}'.", headerSize));
         return;
     }
 }
 
-void BitmapTexImpImporter::loadV2(std::istream& stream, ITextureAllocator& textureAllocator)
+void BitmapTexImpImporter::loadV2(std::istream& stream, ITextureAllocator& textureAllocator,
+                                  const TextureImportOptions& options)
 {
     BitmapHeaderV2 header;
     stream.read(reinterpret_cast<char*>(&header), sizeof(header));
@@ -207,10 +208,11 @@ void BitmapTexImpImporter::loadV2(std::istream& stream, ITextureAllocator& textu
     mHeader.profileSize = 0;
     mHeader.reserved = 0;
 
-    loadBitmap(stream, textureAllocator, HeaderVersion::V2);
+    loadBitmap(stream, textureAllocator, options, HeaderVersion::V2);
 }
 
-void BitmapTexImpImporter::loadV3(std::istream& stream, ITextureAllocator& textureAllocator)
+void BitmapTexImpImporter::loadV3(std::istream& stream, ITextureAllocator& textureAllocator,
+                                  const TextureImportOptions& options)
 {
     stream.read(reinterpret_cast<char*>(&mHeader), sizeof(BitmapHeaderV3));
 
@@ -226,22 +228,25 @@ void BitmapTexImpImporter::loadV3(std::istream& stream, ITextureAllocator& textu
         mHeader.alphaMask = 0;
     }
 
-    loadBitmap(stream, textureAllocator, HeaderVersion::V3);
+    loadBitmap(stream, textureAllocator, options, HeaderVersion::V3);
 }
 
-void BitmapTexImpImporter::loadV3_52(std::istream& stream, ITextureAllocator& textureAllocator)
+void BitmapTexImpImporter::loadV3_52(std::istream& stream, ITextureAllocator& textureAllocator,
+                                     const TextureImportOptions& options)
 {
     stream.read(reinterpret_cast<char*>(&mHeader), sizeof(BitmapHeaderV3_52));
-    loadBitmap(stream, textureAllocator, HeaderVersion::V3);
+    loadBitmap(stream, textureAllocator, options, HeaderVersion::V3);
 }
 
-void BitmapTexImpImporter::loadV3_56(std::istream& stream, ITextureAllocator& textureAllocator)
+void BitmapTexImpImporter::loadV3_56(std::istream& stream, ITextureAllocator& textureAllocator,
+                                     const TextureImportOptions& options)
 {
     stream.read(reinterpret_cast<char*>(&mHeader), sizeof(BitmapHeaderV3_56));
-    loadBitmap(stream, textureAllocator, HeaderVersion::V3);
+    loadBitmap(stream, textureAllocator, options, HeaderVersion::V3);
 }
 
-void BitmapTexImpImporter::loadV4(std::istream& stream, ITextureAllocator& textureAllocator)
+void BitmapTexImpImporter::loadV4(std::istream& stream, ITextureAllocator& textureAllocator,
+                                  const TextureImportOptions& options)
 {
     stream.read(reinterpret_cast<char*>(&mHeader), sizeof(BitmapHeaderV4));
 
@@ -250,33 +255,36 @@ void BitmapTexImpImporter::loadV4(std::istream& stream, ITextureAllocator& textu
     mHeader.profileSize = 0;
     mHeader.reserved = 0;
 
-    loadBitmap(stream, textureAllocator, HeaderVersion::V4);
+    loadBitmap(stream, textureAllocator, options, HeaderVersion::V4);
 }
 
-void BitmapTexImpImporter::loadV5(std::istream& stream, ITextureAllocator& textureAllocator)
+void BitmapTexImpImporter::loadV5(std::istream& stream, ITextureAllocator& textureAllocator,
+                                  const TextureImportOptions& options)
 {
     stream.read(reinterpret_cast<char*>(&mHeader), sizeof(BitmapHeaderV5));
 
-    loadBitmap(stream, textureAllocator, HeaderVersion::V5);
+    loadBitmap(stream, textureAllocator, options, HeaderVersion::V5);
 }
 
-void BitmapTexImpImporter::loadOs2V2_16(std::istream& stream, ITextureAllocator& textureAllocator)
+void BitmapTexImpImporter::loadOs2V2_16(std::istream& stream, ITextureAllocator& textureAllocator,
+                                        const TextureImportOptions& options)
 {
     stream.read(reinterpret_cast<char*>(&mHeader), sizeof(BitmapHeaderOs2V2_16));
 
     BitmapHeaderOs2V2_16 header;
     memcpy(&header, &mHeader, sizeof(header));
 
-    loadBitmap(stream, textureAllocator, HeaderVersion::Os2V2_16);
+    loadBitmap(stream, textureAllocator, options, HeaderVersion::Os2V2_16);
 }
 
-void BitmapTexImpImporter::loadOs2V2(std::istream& stream, ITextureAllocator& textureAllocator)
+void BitmapTexImpImporter::loadOs2V2(std::istream& stream, ITextureAllocator& textureAllocator,
+                                     const TextureImportOptions& options)
 {
     stream.read(reinterpret_cast<char*>(&mHeader), sizeof(BitmapHeaderOs2V2));
 
     BitmapHeaderOs2V2 header;
     memcpy(&header, &mHeader, sizeof(BitmapHeaderOs2V2));
-    loadBitmap(stream, textureAllocator, HeaderVersion::Os2V2);
+    loadBitmap(stream, textureAllocator, options, HeaderVersion::Os2V2);
 }
 
 bool BitmapTexImpImporter::validateHeader()
@@ -381,7 +389,7 @@ std::vector<BitmapRGBQuad> BitmapTexImpImporter::loadColorPalette(std::istream& 
 }
 
 void BitmapTexImpImporter::loadBitmap(std::istream& stream, ITextureAllocator& textureAllocator,
-                                      HeaderVersion headerVersion)
+                                      const TextureImportOptions& options, HeaderVersion headerVersion)
 {
     mWidth = std::abs(mHeader.width);
     mHeight = std::abs(mHeader.height);
@@ -455,7 +463,7 @@ void BitmapTexImpImporter::loadBitmap(std::istream& stream, ITextureAllocator& t
 
     if(mOptions.padRgbWithAlpha) { format = gpufmt::Format::R8G8B8A8_UNORM; }
 
-    static constexpr gpufmt::Format compressed5551Format = gpufmt::Format::R5G5B5A1_UNORM_PACK16;
+    static constexpr gpufmt::Format compressed5551Format = gpufmt::Format::A1R5G5B5_UNORM_PACK16;
 
     if(mHeader.bitsPerPixel < 16)
     {
@@ -486,7 +494,10 @@ void BitmapTexImpImporter::loadBitmap(std::istream& stream, ITextureAllocator& t
     }
     else if(mHeader.bitsPerPixel == 32) { format = gpufmt::Format::R8G8B8A8_UNORM; }
 
-    if(mHeader.colorSpaceType == BitmapColorSpace::sRGB) { format = gpufmt::sRGBFormat(format).value_or(format); }
+    if(mHeader.colorSpaceType == BitmapColorSpace::sRGB || options.assumeSrgb)
+    {
+        format = gpufmt::sRGBFormat(format).value_or(format);
+    }
 
     if(mFileHeader.bitmapOffset != 0) { stream.seekg(mFileHeader.bitmapOffset); }
 

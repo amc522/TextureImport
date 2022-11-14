@@ -3,14 +3,38 @@
 #include <cputex/converter.h>
 #include <cputex/string.h>
 #include <gpufmt/string.h>
+#include <teximp/string.h>
 #include <teximp/teximp.h>
 
 #include <algorithm>
+#include <format>
 #include <fstream>
 #include <locale>
 
 namespace teximp
 {
+class NullTextureImporter : public TextureImporter
+{
+public:
+    NullTextureImporter(TextureImportError error) { mError = error; }
+
+    NullTextureImporter(TextureImportError error, std::string errorMessage)
+    {
+        mError = error;
+        mErrorMessage = std::move(errorMessage);
+    }
+
+    void setFilePath(std::filesystem::path filePath) { mFilePath = std::move(filePath); }
+
+    virtual FileFormat fileFormat() const { return FileFormat::Undefined; }
+
+protected:
+    virtual bool checkSignature(std::istream& /*stream*/) { return false; }
+    virtual void load(std::istream& /*stream*/, ITextureAllocator& /*textureAllocator*/,
+                      TextureImportOptions /*options*/)
+    {}
+};
+
 std::span<FileFormat> supportedFileFormats() noexcept
 {
     static std::array<FileFormat, (size_t)FileFormat::Count> fileFormats;
@@ -107,31 +131,34 @@ std::optional<FileFormat> getFileFormatFromExtension(std::string_view extension)
     return std::nullopt;
 }
 
-tl::expected<TextureImportResult, TextureImportError>
-importTexture(const std::filesystem::path& filePath, TextureImportOptions options, PreferredBackends preferredBackends)
+TextureImportResult importTexture(const std::filesystem::path& filePath, TextureImportOptions options,
+                                  PreferredBackends preferredBackends)
 {
     DefaultTextureAllocator textureAllocator;
-    tl::expected<std::unique_ptr<TextureImporter>, TextureImportError> importResult =
-        importTexture(filePath, textureAllocator, options, preferredBackends);
+    std::unique_ptr<TextureImporter> importer = importTexture(filePath, textureAllocator, options, preferredBackends);
 
-    if(!importResult) { return tl::make_unexpected(importResult.error()); }
-
-    return TextureImportResult{.importer = std::move(importResult.value()),
-                               .textureAllocator = std::move(textureAllocator)};
+    return TextureImportResult{.importer = std::move(importer), .textureAllocator = std::move(textureAllocator)};
 }
 
-tl::expected<std::unique_ptr<TextureImporter>, TextureImportError> importTexture(const std::filesystem::path& filePath,
-                                                                                 ITextureAllocator& textureAllocator,
-                                                                                 TextureImportOptions options,
-                                                                                 PreferredBackends preferredBackends)
+std::unique_ptr<TextureImporter> importTexture(const std::filesystem::path& filePath,
+                                               ITextureAllocator& textureAllocator, TextureImportOptions options,
+                                               PreferredBackends preferredBackends)
 {
-    std::unique_ptr<TextureImporter> loader;
-
-    if(!std::filesystem::exists(filePath)) { return tl::make_unexpected(TextureImportError::FileNotFound); }
+    if(!std::filesystem::exists(filePath))
+    {
+        auto importer = std::make_unique<NullTextureImporter>(TextureImportError::FileNotFound);
+        importer->setFilePath(filePath);
+        return importer;
+    }
 
     std::ifstream imageStream(filePath, std::ios::in | std::ios::binary);
 
-    if(!imageStream) { return tl::make_unexpected(TextureImportError::FailedToOpenFile); }
+    if(!imageStream)
+    {
+        auto importer = std::make_unique<NullTextureImporter>(TextureImportError::FailedToOpenFile);
+        importer->setFilePath(filePath);
+        return importer;
+    }
 
     if(filePath.has_extension())
     {
@@ -146,10 +173,10 @@ tl::expected<std::unique_ptr<TextureImporter>, TextureImportError> importTexture
 
         if(fileFormatResult)
         {
-            loader = TextureImporterFactory::makeTextureImporter(fileFormatResult.value(), textureAllocator, options,
-                                                                 preferredBackends, filePath, imageStream);
+            auto importer = TextureImporterFactory::makeTextureImporter(
+                fileFormatResult.value(), textureAllocator, options, preferredBackends, filePath, imageStream);
 
-            if(loader) { return loader; }
+            if(importer) { return importer; }
 
             imageStream.seekg(0);
         }
@@ -157,19 +184,17 @@ tl::expected<std::unique_ptr<TextureImporter>, TextureImportError> importTexture
 
     for(FileFormat fileFormat : supportedFileFormats())
     {
-        loader = TextureImporterFactory::makeTextureImporter(fileFormat, textureAllocator, options, preferredBackends,
-                                                             filePath, imageStream);
+        auto importer = TextureImporterFactory::makeTextureImporter(fileFormat, textureAllocator, options,
+                                                                    preferredBackends, filePath, imageStream);
 
-        if(!loader) { continue; }
+        if(importer) { return importer; }
 
         imageStream.seekg(0);
     }
 
-    if(loader == nullptr) { return tl::make_unexpected(TextureImportError::UnknownFormat); }
-
-    if(loader->error() != TextureImportError::None) { return tl::make_unexpected(loader->error()); }
-
-    return loader;
+    auto importer = std::make_unique<NullTextureImporter>(TextureImportError::UnknownFileFormat);
+    importer->setFilePath(filePath);
+    return importer;
 }
 
 TextureImporter::TextureImporter(std::filesystem::path filePath)
@@ -200,7 +225,6 @@ void TextureImporter::setError(TextureImportError error)
 {
     mStatus = TextureImportStatus::Error;
     mError = error;
-    mErrorMessage.clear();
 }
 
 void TextureImporter::setError(TextureImportError error, const std::string& errorMessage)
@@ -225,6 +249,18 @@ void TextureImporter::setTextureAllocationError(const TextureParams& texturePara
                          gpufmt::toString(textureParams.format), cputex::toString(textureParams.dimension),
                          textureParams.extent.x, textureParams.extent.y, textureParams.extent.z,
                          textureParams.arraySize, textureParams.faces, textureParams.mips));
+}
+
+void TextureImporter::setTextureAllocatorFormatLayoutError(FormatLayout formatLayout)
+{
+    setError(TextureImportError::InvalidTextureAllocatorFormatLayout,
+             std::format("Invalid format layout '{}' selected by the texture allocator.", toString(formatLayout)));
+}
+
+void TextureImporter::setTextureAllocatorFormatError(gpufmt::Format format)
+{
+    setError(TextureImportError::InvalidTextureAllocatorFormat,
+             std::format("Invalid format '{}' selected by the texture allocator.", gpufmt::toString(format)));
 }
 
 void CpuTexTextureAllocator::preAllocation(std::optional<int> textureCount)

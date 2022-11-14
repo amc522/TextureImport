@@ -3,6 +3,7 @@
 #ifdef TEXIMP_ENABLE_TARGA_BACKEND_TEXIMP
 
 #include <glm/common.hpp>
+#include <gpufmt/utility.h>
 
 namespace teximp::targa
 {
@@ -98,8 +99,7 @@ bool isRLECompressed(uint8_t imageType)
     return imageType >= 9 && imageType <= 11;
 }
 
-void TargaTexImpImporter::load(std::istream& stream, ITextureAllocator& textureAllocator,
-                               TextureImportOptions /*options*/)
+void TargaTexImpImporter::load(std::istream& stream, ITextureAllocator& textureAllocator, TextureImportOptions options)
 {
     if(!mFooterFound) { readBaseHeader(stream); }
 
@@ -152,6 +152,8 @@ void TargaTexImpImporter::load(std::istream& stream, ITextureAllocator& textureA
     case 24: format = gpufmt::Format::B8G8R8_UNORM; break;
     case 32: format = gpufmt::Format::B8G8R8A8_UNORM; break;
     }
+
+    if(options.assumeSrgb) { format = gpufmt::sRGBFormat(format).value_or(format); }
 
     cputex::TextureParams textureParams{
         .format = format,

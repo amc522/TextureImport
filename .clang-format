@@ -65,15 +65,15 @@ FixNamespaceComments: true
 IncludeBlocks: Regroup
 IncludeCategories:
     # stdlib includes
-    - Regex:    '<[[:alnum:]|_]+>'
+    - Regex:    '<[[:alnum:]|_|\-]+>'
       Priority: 3
       CaseSensitive: false
     # All local includes
-    - Regex:    '"[[:alnum:]|_|\/]+\.[[:alpha:]]+"'
+    - Regex:    '"[[:alnum:]|_|\-|\/]+\.[[:alpha:]]+"'
       Priority: 1
       CaseSensitive: false
     # Global (non-stdlib) includes
-    - Regex:    '<[[:alnum:]|_|\/]+\.[[:alpha:]]+>'
+    - Regex:    '<[[:alnum:]|_|\-|\/]+\.[[:alpha:]]+>'
       Priority: 2
       CaseSensitive: false
 IndentAccessModifiers: false

@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\teximp\bitmap\bitmap_importer.teximp.h" />
+    <ClInclude Include="..\..\include\teximp\bitmap\bitmap_importer.wic.h" />
     <ClInclude Include="..\..\include\teximp\config.h" />
     <ClInclude Include="..\..\include\teximp\dds\dds.h" />
     <ClInclude Include="..\..\include\teximp\dds\dds_importer.teximp.h" />
@@ -28,13 +29,16 @@
     <ClInclude Include="..\..\include\teximp\ktx\ktx.h" />
     <ClInclude Include="..\..\include\teximp\ktx\ktx_importer.teximp.h" />
     <ClInclude Include="..\..\include\teximp\png\png_importer.libpng.h" />
+    <ClInclude Include="..\..\include\teximp\string.h" />
     <ClInclude Include="..\..\include\teximp\targa\targa_importer.teximp.h" />
     <ClInclude Include="..\..\include\teximp\teximp.h" />
     <ClInclude Include="..\..\include\teximp\tiff\tiff_importer.tiff.h" />
     <ClInclude Include="..\..\src\texture_importer_factory.h" />
     <ClInclude Include="..\..\src\utilities.h" />
+    <ClInclude Include="..\..\src\wic_manager.h" />
     <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\config.h" />
     <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\converter.h" />
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\d3d12.h" />
     <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\definitions.h" />
     <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\fwd.h" />
     <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\sampler.h" />
@@ -46,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\bitmap_importer.teximp.cpp" />
+    <ClCompile Include="..\..\src\bitmap_importer.wic.cpp" />
     <ClCompile Include="..\..\src\dds_importer.teximp.cpp" />
     <ClCompile Include="..\..\src\exr_importer.openexr.cpp" />
     <ClCompile Include="..\..\src\jpeg_importer.libjpeg_turbo.cpp" />
@@ -55,7 +60,9 @@
     <ClCompile Include="..\..\src\teximp.cpp" />
     <ClCompile Include="..\..\src\texture_importer_factory.cpp" />
     <ClCompile Include="..\..\src\tiff_importer.tiff.cpp" />
+    <ClCompile Include="..\..\src\wic_manager.cpp" />
     <ClCompile Include="..\..\thirdparty\cputexture\src\converter.cpp" />
+    <ClCompile Include="..\..\thirdparty\cputexture\src\d3d12.cpp" />
     <ClCompile Include="..\..\thirdparty\cputexture\src\sampler.cpp" />
     <ClCompile Include="..\..\thirdparty\cputexture\src\shared_texture.cpp" />
     <ClCompile Include="..\..\thirdparty\cputexture\src\texture_operations.cpp" />
@@ -152,13 +159,16 @@
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;NOMINMAX;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\..\include\;..\..\thirdparty\gpuformat\include\;..\..\thirdparty\gpuformat\thirdparty\astc_dec\;..\..\thirdparty\gpuformat\thirdparty\DirectXTex\;..\..\thirdparty\gpuformat\thirdparty\gl\;..\..\thirdparty\gpuformat\thirdparty\khr\;..\..\thirdparty\gpuformat\thirdparty\PowerVR_SDK\;..\..\thirdparty\gpuformat\thirdparty\swiftshader\;..\..\thirdparty\cputexture\include\;$(VcpkgManifestRoot)\vcpkg_installed\$(VcpkgTriplet)\$(VcpkgTriplet)\include\Imath</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include\;..\..\thirdparty\gpuformat\include\;..\..\thirdparty\gpuformat\thirdparty\astc_dec\;..\..\thirdparty\gpuformat\thirdparty\DirectXTex\;..\..\thirdparty\gpuformat\thirdparty\gl\;..\..\thirdparty\gpuformat\thirdparty\khr\;..\..\thirdparty\gpuformat\thirdparty\PowerVR_SDK\;..\..\thirdparty\gpuformat\thirdparty\swiftshader\;..\..\thirdparty\cputexture\include\;..\..\thirdparty\cputexture\thirdparty\directx\include\;$(VcpkgManifestRoot)\vcpkg_installed\$(VcpkgTriplet)\$(VcpkgTriplet)\include\Imath</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>windowscodecs.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -169,7 +179,7 @@
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;NOMINMAX;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\..\include\;..\..\thirdparty\gpuformat\include\;..\..\thirdparty\gpuformat\thirdparty\astc_dec\;..\..\thirdparty\gpuformat\thirdparty\DirectXTex\;..\..\thirdparty\gpuformat\thirdparty\gl\;..\..\thirdparty\gpuformat\thirdparty\khr\;..\..\thirdparty\gpuformat\thirdparty\PowerVR_SDK\;..\..\thirdparty\gpuformat\thirdparty\swiftshader\;..\..\thirdparty\cputexture\include\;$(VcpkgManifestRoot)\vcpkg_installed\$(VcpkgTriplet)\$(VcpkgTriplet)\include\Imath</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include\;..\..\thirdparty\gpuformat\include\;..\..\thirdparty\gpuformat\thirdparty\astc_dec\;..\..\thirdparty\gpuformat\thirdparty\DirectXTex\;..\..\thirdparty\gpuformat\thirdparty\gl\;..\..\thirdparty\gpuformat\thirdparty\khr\;..\..\thirdparty\gpuformat\thirdparty\PowerVR_SDK\;..\..\thirdparty\gpuformat\thirdparty\swiftshader\;..\..\thirdparty\cputexture\include\;..\..\thirdparty\cputexture\thirdparty\directx\include\;$(VcpkgManifestRoot)\vcpkg_installed\$(VcpkgTriplet)\$(VcpkgTriplet)\include\Imath</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -178,6 +188,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>windowscodecs.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -186,13 +199,16 @@
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;NOMINMAX;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\..\include\;..\..\thirdparty\gpuformat\include\;..\..\thirdparty\gpuformat\thirdparty\astc_dec\;..\..\thirdparty\gpuformat\thirdparty\DirectXTex\;..\..\thirdparty\gpuformat\thirdparty\gl\;..\..\thirdparty\gpuformat\thirdparty\khr\;..\..\thirdparty\gpuformat\thirdparty\PowerVR_SDK\;..\..\thirdparty\gpuformat\thirdparty\swiftshader\;..\..\thirdparty\cputexture\include\;$(VcpkgManifestRoot)\vcpkg_installed\$(VcpkgTriplet)\$(VcpkgTriplet)\include\Imath</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include\;..\..\thirdparty\gpuformat\include\;..\..\thirdparty\gpuformat\thirdparty\astc_dec\;..\..\thirdparty\gpuformat\thirdparty\DirectXTex\;..\..\thirdparty\gpuformat\thirdparty\gl\;..\..\thirdparty\gpuformat\thirdparty\khr\;..\..\thirdparty\gpuformat\thirdparty\PowerVR_SDK\;..\..\thirdparty\gpuformat\thirdparty\swiftshader\;..\..\thirdparty\cputexture\include\;..\..\thirdparty\cputexture\thirdparty\directx\include\;$(VcpkgManifestRoot)\vcpkg_installed\$(VcpkgTriplet)\$(VcpkgTriplet)\include\Imath</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>windowscodecs.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -203,7 +219,7 @@
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;NOMINMAX;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\..\include\;..\..\thirdparty\gpuformat\include\;..\..\thirdparty\gpuformat\thirdparty\astc_dec\;..\..\thirdparty\gpuformat\thirdparty\DirectXTex\;..\..\thirdparty\gpuformat\thirdparty\gl\;..\..\thirdparty\gpuformat\thirdparty\khr\;..\..\thirdparty\gpuformat\thirdparty\PowerVR_SDK\;..\..\thirdparty\gpuformat\thirdparty\swiftshader\;..\..\thirdparty\cputexture\include\;$(VcpkgManifestRoot)\vcpkg_installed\$(VcpkgTriplet)\$(VcpkgTriplet)\include\Imath</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include\;..\..\thirdparty\gpuformat\include\;..\..\thirdparty\gpuformat\thirdparty\astc_dec\;..\..\thirdparty\gpuformat\thirdparty\DirectXTex\;..\..\thirdparty\gpuformat\thirdparty\gl\;..\..\thirdparty\gpuformat\thirdparty\khr\;..\..\thirdparty\gpuformat\thirdparty\PowerVR_SDK\;..\..\thirdparty\gpuformat\thirdparty\swiftshader\;..\..\thirdparty\cputexture\include\;..\..\thirdparty\cputexture\thirdparty\directx\include\;$(VcpkgManifestRoot)\vcpkg_installed\$(VcpkgTriplet)\$(VcpkgTriplet)\include\Imath</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -212,6 +228,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>windowscodecs.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

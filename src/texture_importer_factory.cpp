@@ -3,6 +3,7 @@
 #include <teximp/teximp.h>
 
 #include <teximp/bitmap/bitmap_importer.teximp.h>
+#include <teximp/bitmap/bitmap_importer.wic.h>
 #include <teximp/dds/dds_importer.teximp.h>
 #include <teximp/exr/exr_importer.openexr.h>
 #include <teximp/jpeg/jpeg_importer.libjpeg_turbo.h>
@@ -20,6 +21,10 @@ namespace teximp
     {
 #ifdef TEXIMP_ENABLE_BITMAP_BACKEND_TEXIMP
     case BitmapImporterBackend::TexImp: return std::make_unique<bitmap::BitmapTexImpImporter>();
+#endif
+
+#ifdef TEXIMP_ENABLE_BITMAP_BACKEND_WIC
+    case BitmapImporterBackend::Wic: return std::make_unique<bitmap::BitmapWicImporter>();
 #endif
 
     default: return nullptr;
@@ -174,6 +179,7 @@ TextureImporterFactory::makeTextureImporter(FileFormat fileFormat, ITextureAlloc
     if(!textureImporter->checkSignature(stream)) { return nullptr; }
 
     textureImporter->mFilePath = filePath;
+    textureImporter->mTextureAllocator = &textureAllocator;
     textureImporter->load(stream, textureAllocator, options);
 
     return textureImporter;

@@ -255,19 +255,19 @@ private:
         uint32_t bytes32;
     };
 
-    void loadV2(std::istream& stream, ITextureAllocator& textureAllocator);
-    void loadV3(std::istream& stream, ITextureAllocator& textureAllocator);
-    void loadV3_52(std::istream& stream, ITextureAllocator& textureAllocator);
-    void loadV3_56(std::istream& stream, ITextureAllocator& textureAllocator);
-    void loadV4(std::istream& stream, ITextureAllocator& textureAllocator);
-    void loadV5(std::istream& stream, ITextureAllocator& textureAllocator);
-    void loadOs2V2_16(std::istream& stream, ITextureAllocator& textureAllocator);
-    void loadOs2V2(std::istream& stream, ITextureAllocator& textureAllocator);
+    void loadV2(std::istream& stream, ITextureAllocator& textureAllocator, const TextureImportOptions& options);
+    void loadV3(std::istream& stream, ITextureAllocator& textureAllocator, const TextureImportOptions& options);
+    void loadV3_52(std::istream& stream, ITextureAllocator& textureAllocator, const TextureImportOptions& options);
+    void loadV3_56(std::istream& stream, ITextureAllocator& textureAllocator, const TextureImportOptions& options);
+    void loadV4(std::istream& stream, ITextureAllocator& textureAllocator, const TextureImportOptions& options);
+    void loadV5(std::istream& stream, ITextureAllocator& textureAllocator, const TextureImportOptions& options);
+    void loadOs2V2_16(std::istream& stream, ITextureAllocator& textureAllocator, const TextureImportOptions& options);
+    void loadOs2V2(std::istream& stream, ITextureAllocator& textureAllocator, const TextureImportOptions& options);
 
     bool validateHeader();
     void calcDataSize(std::istream& stream);
     std::vector<BitmapRGBQuad> loadColorPalette(std::istream& stream, HeaderVersion headerVersion);
-    void loadBitmap(std::istream& stream, ITextureAllocator& textureAllocator, HeaderVersion headerVersion);
+    void loadBitmap(std::istream& stream, ITextureAllocator& textureAllocator, const TextureImportOptions& options, HeaderVersion headerVersion);
 
     void read1BitRow(std::istream& stream, std::span<glm::u8vec3> textureRow,
                      std::span<const BitmapRGBQuad> colorPalette);

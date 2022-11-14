@@ -85,6 +85,18 @@
     <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\utility.h">
       <Filter>cputexture</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\teximp\bitmap\bitmap_importer.wic.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\wic_manager.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\teximp\string.h">
+      <Filter>textureimport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\thirdparty\cputexture\include\cputex\d3d12.h">
+      <Filter>cputexture</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\bitmap_importer.teximp.cpp">
@@ -170,6 +182,15 @@
     </ClCompile>
     <ClCompile Include="..\..\thirdparty\gpuformat\src\limits.cpp">
       <Filter>gpuformat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\bitmap_importer.wic.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\wic_manager.cpp">
+      <Filter>textureimport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\thirdparty\cputexture\src\d3d12.cpp">
+      <Filter>cputexture</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

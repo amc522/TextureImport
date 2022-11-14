@@ -1,7 +1,11 @@
 #pragma once
 
-namespace teximp
-{
+#define TEXIMP_COMPILER_MSVC GF_COMPILER_MSVC
+
+#ifdef _WIN32
+#define TEXIMP_PLATFORM_WINDOWS
+#endif
+
 #define TEXIMP_ENABLE_BITMAP
 #define TEXIMP_ENABLE_DDS
 #define TEXIMP_ENABLE_EXR
@@ -13,7 +17,12 @@ namespace teximp
 
 #ifdef TEXIMP_ENABLE_BITMAP
 #define TEXIMP_ENABLE_BITMAP_BACKEND_TEXIMP
+
+#ifdef TEXIMP_PLATFORM_WINDOWS
+#define TEXIMP_ENABLE_BITMAP_BACKEND_WIC
 #endif
+
+#endif // TEXIMP_ENABLE_BITMAP
 
 #ifdef TEXIMP_ENABLE_DDS
 #define TEXIMP_ENABLE_DDS_BACKEND_TEXIMP
@@ -42,6 +51,3 @@ namespace teximp
 #ifdef TEXIMP_ENABLE_TIFF
 #define TEXIMP_ENABLE_TIFF_BACKEND_TIFF
 #endif
-
-#define TEXIMP_COMPILER_MSVC GF_COMPILER_MSVC
-} // namespace teximp

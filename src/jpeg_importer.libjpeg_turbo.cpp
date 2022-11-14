@@ -57,17 +57,64 @@ void JpegLibJpegTurboImporter::load(std::istream& stream, ITextureAllocator& tex
     }
 
     gpufmt::Format gpuFormat;
-    TJPF jpegFormat;
 
     if(options.padRgbWithAlpha)
     {
-        gpuFormat = gpufmt::Format::R8G8B8A8_UNORM;
-        jpegFormat = TJPF::TJPF_RGBA;
+        TJPF_ABGR;
+        gpufmt::Format::A8B8G8R8_UNORM_PACK32;
+        TJPF_ARGB;
+        TJPF_BGRA;
+        gpufmt::Format::B8G8R8A8_UNORM;
+        TJPF_BGRX;
+        gpufmt::Format::B8G8R8X8_UNORM;
+        TJPF_RGBA;
+        gpufmt::Format::R8G8B8A8_UNORM;
+        TJPF_RGBX;
+        TJPF_XBGR;
+        TJPF_XRGB;
+
+        std::array availableFormats = {
+            (options.assumeSrgb) ? gpufmt::Format::R8G8B8A8_SRGB : gpufmt::Format::R8G8B8A8_UNORM, // TJPF_RGBA
+            (options.assumeSrgb) ? gpufmt::Format::B8G8R8X8_SRGB : gpufmt::Format::B8G8R8X8_UNORM, // TJPF_BGRX
+            (options.assumeSrgb) ? gpufmt::Format::B8G8R8A8_SRGB : gpufmt::Format::B8G8R8A8_UNORM, // TJPF_BGRA
+            (options.assumeSrgb) ? gpufmt::Format::A8B8G8R8_SRGB_PACK32
+                                 : gpufmt::Format::A8B8G8R8_UNORM_PACK32, // TJPF_ABGR
+        };
+
+        gpuFormat = textureAllocator.selectFormat(FormatLayout::_8_8_8_8, availableFormats);
     }
     else
     {
-        gpuFormat = gpufmt::Format::R8G8B8_UNORM;
-        jpegFormat = TJPF::TJPF_RGB;
+        std::array availableFormats = {
+            (options.assumeSrgb) ? gpufmt::Format::R8G8B8_SRGB : gpufmt::Format::R8G8B8_UNORM,     // TJPF_RGB
+            (options.assumeSrgb) ? gpufmt::Format::B8G8R8_SRGB : gpufmt::Format::B8G8R8_UNORM,     // TJPF_BGR
+            (options.assumeSrgb) ? gpufmt::Format::R8G8B8A8_SRGB : gpufmt::Format::R8G8B8A8_UNORM, // TJPF_RGBA
+            (options.assumeSrgb) ? gpufmt::Format::B8G8R8X8_SRGB : gpufmt::Format::B8G8R8X8_UNORM, // TJPF_BGRX
+            (options.assumeSrgb) ? gpufmt::Format::B8G8R8A8_SRGB : gpufmt::Format::B8G8R8A8_UNORM, // TJPF_BGRA
+            (options.assumeSrgb) ? gpufmt::Format::A8B8G8R8_SRGB_PACK32
+                                 : gpufmt::Format::A8B8G8R8_UNORM_PACK32, // TJPF_ABGR
+        };
+
+        gpuFormat = textureAllocator.selectFormat(FormatLayout::_8_8_8_8, availableFormats);
+    }
+
+    TJPF jpegFormat;
+
+    switch(gpuFormat)
+    {
+    case gpufmt::Format::R8G8B8_SRGB: [[fallthrough]];
+    case gpufmt::Format::R8G8B8_UNORM: jpegFormat = TJPF_RGB; break;
+    case gpufmt::Format::B8G8R8_SRGB: [[fallthrough]];
+    case gpufmt::Format::B8G8R8_UNORM: jpegFormat = TJPF_BGR; break;
+    case gpufmt::Format::R8G8B8A8_SRGB: [[fallthrough]];
+    case gpufmt::Format::R8G8B8A8_UNORM: jpegFormat = TJPF_RGBA; break;
+    case gpufmt::Format::B8G8R8X8_SRGB: [[fallthrough]];
+    case gpufmt::Format::B8G8R8X8_UNORM: jpegFormat = TJPF_BGRX; break;
+    case gpufmt::Format::B8G8R8A8_SRGB: [[fallthrough]];
+    case gpufmt::Format::B8G8R8A8_UNORM: jpegFormat = TJPF_BGRA; break;
+    case gpufmt::Format::A8B8G8R8_SRGB_PACK32: [[fallthrough]];
+    case gpufmt::Format::A8B8G8R8_UNORM_PACK32: jpegFormat = TJPF_ABGR; break;
+    default: jpegFormat = TJPF_RGBA;
     }
 
     cputex::TextureParams params{

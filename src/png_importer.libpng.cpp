@@ -2,7 +2,9 @@
 
 #ifdef TEXIMP_ENABLE_PNG_BACKEND_LIBPNG
 
+#include <gpufmt/string.h>
 #include <png.h>
+#include <teximp/string.h>
 
 #include <bit>
 
@@ -10,6 +12,42 @@
 
 namespace teximp::png
 {
+constexpr std::span<const gpufmt::Format> getFormatsForLayout(FormatLayout formatLayout, bool needsAlpha, bool sRGB)
+{
+    if(formatLayout == FormatLayout::_8_8_8)
+    {
+        return {
+            {(sRGB) ? gpufmt::Format::R8G8B8_SRGB : gpufmt::Format::R8G8B8_UNORM,
+             (sRGB) ? gpufmt::Format::B8G8R8_SRGB : gpufmt::Format::B8G8R8_UNORM}
+        };
+    }
+    else if(formatLayout == FormatLayout::_8_8_8_8 && needsAlpha)
+    {
+        return {
+            {
+             (sRGB) ? gpufmt::Format::R8G8B8A8_SRGB : gpufmt::Format::R8G8B8A8_UNORM,
+             (sRGB) ? gpufmt::Format::B8G8R8A8_SRGB : gpufmt::Format::B8G8R8A8_UNORM,
+             (sRGB) ? gpufmt::Format::A8B8G8R8_SRGB_PACK32 : gpufmt::Format::A8B8G8R8_UNORM_PACK32,
+             }
+        };
+    }
+    else if(formatLayout == FormatLayout::_8_8_8_8 && !needsAlpha)
+    {
+        return {
+            {
+             (sRGB) ? gpufmt::Format::R8G8B8A8_SRGB : gpufmt::Format::R8G8B8A8_UNORM,
+             (sRGB) ? gpufmt::Format::B8G8R8A8_SRGB : gpufmt::Format::B8G8R8A8_UNORM,
+             (sRGB) ? gpufmt::Format::B8G8R8X8_SRGB : gpufmt::Format::B8G8R8X8_UNORM,
+             (sRGB) ? gpufmt::Format::A8B8G8R8_SRGB_PACK32 : gpufmt::Format::A8B8G8R8_UNORM_PACK32,
+             }
+        };
+    }
+    else if(formatLayout == FormatLayout::_16_16_16) { return {{gpufmt::Format::R16G16B16_UNORM}}; }
+    else if(formatLayout == FormatLayout::_16_16_16_16) { return {{gpufmt::Format::R16G16B16A16_UNORM}}; }
+
+    return {};
+}
+
 FileFormat PngLibPngImporter::fileFormat() const
 {
     return FileFormat::Png;
@@ -81,74 +119,96 @@ void PngLibPngImporter::load(std::istream& stream, ITextureAllocator& textureAll
         int compressionType;
         int filterMethod;
         uint8_t channelCount;
-        bool hasAlpha = false;
+        bool pngHasAlpha = false;
 
         png_get_IHDR(pngRead, pngInfo, &width, &height, &bitDepth, &colorType, &interlaceType, &compressionType,
                      &filterMethod);
         channelCount = png_get_channels(pngRead, pngInfo);
 
-        hasAlpha = channelCount == 4 || colorType == PNG_COLOR_TYPE_GRAY_ALPHA || colorType == PNG_COLOR_TYPE_RGBA;
+        pngHasAlpha = channelCount == 4 || colorType == PNG_COLOR_TYPE_GRAY_ALPHA || colorType == PNG_COLOR_TYPE_RGBA;
+
+        int srgbIntent;
+        const bool sRgb = png_get_sRGB(pngRead, pngInfo, &srgbIntent) == 0;
 
         if(bitDepth == 16 && std::endian::native == std::endian::little) { png_set_swap(pngRead); }
 
-        if(!hasAlpha && options.padRgbWithAlpha)
+        if(!pngHasAlpha && options.padRgbWithAlpha) { png_set_add_alpha(pngRead, 0xFFFFFFFF, PNG_FILLER_AFTER); }
+
+        const bool alphaNeeded = pngHasAlpha || options.padRgbWithAlpha;
+
+        FormatLayout formatLayout;
+
+        if(alphaNeeded && bitDepth <= 8)
         {
-            png_set_add_alpha(pngRead, 0xFFFFFFFF, PNG_FILLER_AFTER);
-            hasAlpha = true;
+            constexpr std::array additionalLayouts = {FormatLayout::_16_16_16_16};
+
+            formatLayout = textureAllocator.selectFormatLayout(FormatLayout::_8_8_8_8, additionalLayouts);
+
+            if(formatLayout != FormatLayout::_8_8_8_8 && formatLayout != FormatLayout::_16_16_16_16)
+            {
+                setTextureAllocatorFormatLayoutError(formatLayout);
+                return;
+            }
+        }
+        else if(!alphaNeeded && bitDepth <= 8)
+        {
+            constexpr std::array additionalLayouts = {FormatLayout::_8_8_8_8, FormatLayout::_16_16_16,
+                                                      FormatLayout::_16_16_16_16};
+
+            formatLayout = textureAllocator.selectFormatLayout(FormatLayout::_8_8_8, additionalLayouts);
+
+            if(formatLayout != FormatLayout::_8_8_8 && std::find(additionalLayouts.cbegin(), additionalLayouts.cend(),
+                                                                 formatLayout) == additionalLayouts.cend())
+            {
+                setTextureAllocatorFormatLayoutError(formatLayout);
+                return;
+            }
+        }
+        else if(alphaNeeded && bitDepth == 16) { formatLayout = FormatLayout::_16_16_16_16; }
+        else if(!alphaNeeded && bitDepth == 16)
+        {
+            constexpr std::array additionalLayouts = {FormatLayout::_16_16_16_16};
+
+            formatLayout = textureAllocator.selectFormatLayout(FormatLayout::_16_16_16, additionalLayouts);
+
+            if(formatLayout != FormatLayout::_16_16_16 && formatLayout != FormatLayout::_16_16_16_16)
+            {
+                setTextureAllocatorFormatLayoutError(formatLayout);
+                return;
+            }
+        }
+        else
+        {
+            setError(TextureImportError::UnknownFormat);
+            return;
         }
 
-        gpufmt::Format gpuFormat = gpufmt::Format::UNDEFINED;
+        const std::span availableFormats = getFormatsForLayout(formatLayout, alphaNeeded, sRgb || options.assumeSrgb);
+        const gpufmt::Format gpuFormat = textureAllocator.selectFormat(formatLayout, availableFormats);
+
+        if(gpuFormat == gpufmt::Format::UNDEFINED)
+        {
+            setError(TextureImportError::UnknownFormat);
+            return;
+        }
+
+        if(std::find(availableFormats.begin(), availableFormats.end(), gpuFormat) == availableFormats.end())
+        {
+            setTextureAllocatorFormatError(gpuFormat);
+            return;
+        }
 
         switch(colorType)
         {
         case PNG_COLOR_TYPE_PALETTE:
             png_set_palette_to_rgb(pngRead);
             channelCount = 3;
-
-            if(hasAlpha) { gpuFormat = gpufmt::Format::R8G8B8A8_SRGB; }
-            else { gpuFormat = gpufmt::Format::R8G8B8_SRGB; }
             break;
         case PNG_COLOR_TYPE_GRAY:
         case PNG_COLOR_TYPE_GRAY_ALPHA:
             png_set_gray_to_rgb(pngRead);
-            if(bitDepth < 8)
-            {
-                png_set_expand_gray_1_2_4_to_8(pngRead);
-                gpuFormat = (hasAlpha) ? gpufmt::Format::R8G8B8A8_SRGB : gpufmt::Format::R8G8B8_SRGB;
-            }
-            else if(bitDepth == 8)
-            {
-                gpuFormat = (hasAlpha) ? gpufmt::Format::R8G8B8A8_SRGB : gpufmt::Format::R8G8B8_SRGB;
-            }
-            else if(bitDepth == 16)
-            {
-                gpuFormat = (hasAlpha) ? gpufmt::Format::R16G16B16A16_UNORM : gpufmt::Format::R16G16B16_UNORM;
-            }
-
+            if(bitDepth < 8) { png_set_expand_gray_1_2_4_to_8(pngRead); }
             break;
-        case PNG_COLOR_TYPE_RGB:
-            if(!hasAlpha)
-            {
-                if(bitDepth == 8) { gpuFormat = gpufmt::Format::R8G8B8_SRGB; }
-                else if(bitDepth == 16) { gpuFormat = gpufmt::Format::R16G16B16_UNORM; }
-            }
-            else
-            {
-                if(bitDepth == 8) { gpuFormat = gpufmt::Format::R8G8B8A8_SRGB; }
-                else if(bitDepth == 16) { gpuFormat = gpufmt::Format::R16G16B16A16_UNORM; }
-            }
-            break;
-        case PNG_COLOR_TYPE_RGBA:
-            if(bitDepth == 8) { gpuFormat = gpufmt::Format::R8G8B8A8_SRGB; }
-            else if(bitDepth == 16) { gpuFormat = gpufmt::Format::R16G16B16A16_UNORM; }
-            break;
-        }
-
-        if(gpuFormat == gpufmt::Format::UNDEFINED)
-        {
-            mStatus = TextureImportStatus::Error;
-            mError = TextureImportError::Unknown;
-            return;
         }
 
         png_read_update_info(pngRead, pngInfo);
