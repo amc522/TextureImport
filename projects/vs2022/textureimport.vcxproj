@@ -135,19 +135,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>..\..\build\intermediate\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>..\..\build\intermediate\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>..\..\build\intermediate\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>..\..\build\intermediate\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
     <VcpkgEnableManifest>true</VcpkgEnableManifest>
