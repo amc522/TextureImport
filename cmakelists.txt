@@ -1,0 +1,67 @@
+cmake_minimum_required(VERSION 3.7...3.25 FATAL_ERROR)
+
+if(${CMAKE_VERSION} VERSION_LESS 3.12)
+    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif()
+
+set(VCPKG_MANIFEST_MODE ON)
+set(CPUTEX_ADD_GPUFMT OFF)
+
+project(textureimport VERSION 1.0 
+                   LANGUAGES CXX)
+
+find_path(GSL_LITE_INCLUDE_DIR NAMES gsl/gsl-lite.hpp)
+find_package(JPEG REQUIRED)
+find_package(PNG REQUIRED)
+find_package(OpenEXR CONFIG REQUIRED)
+find_path(TL_EXPECTED_INCLUDE_DIR NAMES tl/expected.hpp)
+
+add_subdirectory(gpuformat)
+add_subdirectory(cputexture)
+
+add_library(teximp STATIC include/teximp/config.h
+                          include/teximp/string.h
+                          include/teximp/teximp.h
+                          include/teximp/bitmap/bitmap_importer.teximp.h
+                          include/teximp/bitmap/bitmap_importer.wic.h
+                          include/teximp/dds/dds.h
+                          include/teximp/dds/dds_importer.teximp.h
+                          include/teximp/exr/exr_importer.openexr.h
+                          include/teximp/jpeg/jpeg_importer.libjpeg_turbo.h
+                          include/teximp/ktx/ktx.h
+                          include/teximp/ktx/ktx_importer.teximp.h
+                          include/teximp/png/png_importer.libpng.h
+                          include/teximp/targa/targa_importer.teximp.h
+                          include/teximp/tiff/tiff_importer.tiff.h
+                          src/bitmap_importer.teximp.cpp
+                          src/bitmap_importer.wic.cpp
+                          src/dds_importer.teximp.cpp
+                          src/exr_importer.openexr.cpp
+                          src/jpeg_importer.libjpeg_turbo.cpp
+                          src/ktx_importer.teximp.cpp
+                          src/png_importer.libpng.cpp
+                          src/targa_importer.teximp.cpp
+                          src/teximp.cpp
+                          src/texture_importer_factory.cpp
+                          src/texture_importer_factory.h
+                          src/tiff_importer.tiff.cpp
+                          src/utilities.h
+                          src/wic_manager.cpp
+                          src/wic_manager.h)
+
+if(WIN32)
+    target_compile_definitions(teximp PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+endif(WIN32)
+
+target_include_directories(teximp PUBLIC include
+                                  PRIVATE ${GSL_LITE_INCLUDE_DIR}
+                                          ${JPEG_INCLUDE_DIR}
+                                         )
+
+target_link_libraries(teximp PUBLIC gpufmt
+                                    cputex
+                                    ${JPEG_LIBRARIES}
+                                    PNG::PNG
+                                    OpenEXR::OpenEXR)
+
+target_compile_features(teximp PUBLIC cxx_std_20)

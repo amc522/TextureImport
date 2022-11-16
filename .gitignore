@@ -143,4 +143,4 @@ ipch/
 # MSBuild Binary and Structured Log
 *.binlog
 
-vcpkg_installed/
+build/
