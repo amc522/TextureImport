@@ -132,15 +132,22 @@ private:
 
     struct Properties
     {
-        glm::ivec2 dimensions{0, 0};
-        glm::ivec2 drawDataMin{0, 0};
+        glm::ivec2 displayWindowMin{0, 0};
+        glm::ivec2 displayWindowMax{0, 0};
+        glm::ivec2 dataWindowMin{0, 0};
+        glm::ivec2 dataWindowMax{0, 0};
         int mips = 1;
     };
 
     bool createTextureForLayout(ITextureAllocator& textureAllocator, int textureIndex,
-                                ExrOpenExrImporter::SubViewLayout& layout, int width, int height, int mips);
+                                ExrOpenExrImporter::SubViewLayout& layout, const Properties& properties);
 
-    int extractAllLayouts(const Properties& properties, Part& part, std::span<Imf::FrameBuffer> frameBuffers,
+    void extractAllLayouts(const Properties& properties, Part& part, ITextureAllocator& textureAllocator);
+
+    int allocateTextures(const Properties& properties, Part& part, int textureIndexStart,
+                         ITextureAllocator& textureAllocator);
+
+    void fillFrameBuffers(const Properties& properties, Part& part, std::span<Imf::FrameBuffer> frameBuffers,
                           ITextureAllocator& textureAllocator);
 
     std::vector<Part> mParts;

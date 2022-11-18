@@ -135,9 +135,8 @@ struct ChannelPtrPair
     const Imf::Channel* channel = nullptr;
 };
 
-std::vector<ExrOpenExrImporter::SubViewLayout>
-assignChannelsToLayouts(const Imf::ChannelList& channelList, const std::string& layerName,
-                        std::vector<ExrOpenExrImporter::SubViewLayout>& layouts)
+void assignChannelsToLayouts(const Imf::ChannelList& channelList, const std::string& layerName,
+                             std::vector<ExrOpenExrImporter::SubViewLayout>& layouts)
 {
     static constexpr std::array<std::string_view, 4> colorNames = {"r", "g", "b", "a"};
     static constexpr std::array<std::string_view, 3> positionNames = {"x", "y", "z"};
@@ -271,8 +270,6 @@ assignChannelsToLayouts(const Imf::ChannelList& channelList, const std::string& 
     }
 
     std::move(unknownChannelLayouts.begin(), unknownChannelLayouts.end(), std::back_inserter(layouts));
-
-    return layouts;
 }
 
 gpufmt::Format getLayoutFormat(const ExrOpenExrImporter::SubViewLayout& layout)
@@ -618,26 +615,38 @@ void ExrOpenExrImporter::loadImage(Imf::StdIStream& exrStream, ITextureAllocator
     }
 
     Properties properties;
-    Imath::Box2i dataWindow = inputFile.header().dataWindow();
-    properties.dimensions.x = dataWindow.max.x - dataWindow.min.x + 1;
-    properties.dimensions.y = dataWindow.max.y - dataWindow.min.y + 1;
-    properties.drawDataMin = {dataWindow.min.x, dataWindow.min.y};
+    const Imath::Box2i& dataWindow = inputFile.header().dataWindow();
+    properties.dataWindowMin = {dataWindow.min.x, dataWindow.min.y};
+    properties.dataWindowMax = {dataWindow.max.x, dataWindow.max.y};
 
-    Imf::FrameBuffer frameBuffer;
-    int frameBufferCount = 0;
+    const Imath::Box2i& displayWindow = inputFile.header().displayWindow();
+    properties.displayWindowMin = {displayWindow.min.x, displayWindow.min.y};
+    properties.displayWindowMax = {displayWindow.max.x, displayWindow.max.y};
 
-    frameBufferCount = extractAllLayouts(properties, part, std::span(&frameBuffer, 1), textureAllocator);
+    extractAllLayouts(properties, part, textureAllocator);
 
     for(const View& view : part.views)
     {
         part.totalSubViews += static_cast<int>(view.subViewLayouts.size());
     }
 
-    if(frameBufferCount == 0)
+    if(part.totalSubViews == 0)
     {
-        setError(TextureImportError::UnsupportedFeature, "Currently only R, G, B, and A channels are supported.");
+        setError(TextureImportError::UnsupportedFeature, "No valid layers or channels.");
         return;
     }
+
+    textureAllocator.preAllocation(part.totalSubViews);
+    
+    if(allocateTextures(properties, part, 0, textureAllocator) == 0)
+    {
+        return;
+    }
+
+    textureAllocator.postAllocation();
+
+    Imf::FrameBuffer frameBuffer;
+    fillFrameBuffers(properties, part, std::span(&frameBuffer, 1), textureAllocator);
 
     inputFile.setFrameBuffer(frameBuffer);
     inputFile.readPixels(dataWindow.min.y, dataWindow.max.y);
@@ -651,6 +660,8 @@ void ExrOpenExrImporter::loadMultiPartImage(Imf::StdIStream& exrStream, ITexture
     Imf::MultiPartInputFile multiPartInputFile{exrStream};
     int partsCount = multiPartInputFile.parts();
     mParts.reserve(partsCount);
+
+    int textureCount = 0;
 
     for(int i = 0; i < partsCount; ++i)
     {
@@ -686,31 +697,81 @@ void ExrOpenExrImporter::loadMultiPartImage(Imf::StdIStream& exrStream, ITexture
         }
 
         Properties properties;
-        Imath::Box2i dataWindow = inputFilePart.header().dataWindow();
-        properties.dimensions.x = dataWindow.max.x - dataWindow.min.x + 1;
-        properties.dimensions.y = dataWindow.max.y - dataWindow.min.y + 1;
-        properties.drawDataMin = {dataWindow.min.x, dataWindow.min.y};
+        const Imath::Box2i& dataWindow = inputFilePart.header().dataWindow();
+        properties.dataWindowMin = {dataWindow.min.x, dataWindow.min.y};
+        properties.dataWindowMax = {dataWindow.max.x, dataWindow.max.y};
 
-        Imf::FrameBuffer frameBuffer;
-        int frameBufferCount = 0;
+        const Imath::Box2i& displayWindow = inputFilePart.header().displayWindow();
+        properties.displayWindowMin = {displayWindow.min.x, displayWindow.min.y};
+        properties.displayWindowMax = {displayWindow.max.x, displayWindow.max.y};
 
-        frameBufferCount = extractAllLayouts(properties, part, std::span(&frameBuffer, 1), textureAllocator);
+        extractAllLayouts(properties, part, textureAllocator);
 
         for(const View& view : part.views)
         {
             part.totalSubViews += static_cast<int>(view.subViewLayouts.size());
         }
 
-        if(frameBufferCount == 0)
+        if(part.totalSubViews == 0)
         {
-            setError(TextureImportError::UnsupportedFeature, "Currently only R, G, B, and A channels are supported.");
+            setError(TextureImportError::UnsupportedFeature, "No valid layers or channels.");
             return;
         }
 
-        inputFilePart.setFrameBuffer(frameBuffer);
-        inputFilePart.readPixels(dataWindow.min.y, dataWindow.max.y);
+        textureCount += part.totalSubViews;
 
         part.attributes = parseAttributes(inputFilePart.header());
+    }
+
+    textureAllocator.preAllocation(textureCount);
+
+    int textureIndex = 0;
+
+    for(int i = 0; i < partsCount; ++i)
+    {
+        Imf::InputPart inputFilePart{multiPartInputFile, i};
+
+        Properties properties;
+        const Imath::Box2i& dataWindow = inputFilePart.header().dataWindow();
+        properties.dataWindowMin = {dataWindow.min.x, dataWindow.min.y};
+        properties.dataWindowMax = {dataWindow.max.x, dataWindow.max.y};
+
+        const Imath::Box2i& displayWindow = inputFilePart.header().displayWindow();
+        properties.displayWindowMin = {displayWindow.min.x, displayWindow.min.y};
+        properties.displayWindowMax = {displayWindow.max.x, displayWindow.max.y};
+
+        Imf::FrameBuffer frameBuffer;
+
+        int allocationCount = allocateTextures(properties, mParts[i], textureIndex, textureAllocator);
+
+        if(allocationCount == 0)
+        {
+            return;
+        }
+
+        textureIndex += allocationCount;
+    }
+
+    textureAllocator.postAllocation();
+
+    for(int i = 0; i < partsCount; ++i)
+    {
+        Imf::InputPart inputFilePart{multiPartInputFile, i};
+
+        Properties properties;
+        const Imath::Box2i& dataWindow = inputFilePart.header().dataWindow();
+        properties.dataWindowMin = {dataWindow.min.x, dataWindow.min.y};
+        properties.dataWindowMax = {dataWindow.max.x, dataWindow.max.y};
+
+        const Imath::Box2i& displayWindow = inputFilePart.header().displayWindow();
+        properties.displayWindowMin = {displayWindow.min.x, displayWindow.min.y};
+        properties.displayWindowMax = {displayWindow.max.x, displayWindow.max.y};
+
+        Imf::FrameBuffer frameBuffer;
+        fillFrameBuffers(properties, mParts[i], std::span(&frameBuffer, 1), textureAllocator);
+
+        inputFilePart.setFrameBuffer(frameBuffer);
+        inputFilePart.readPixels(dataWindow.min.y, dataWindow.max.y);
     }
 }
 
@@ -758,27 +819,38 @@ void ExrOpenExrImporter::loadTiledImage(Imf::StdIStream& exrStream, ITextureAllo
     }
 
     Properties properties;
-    Imath::Box2i dataWindow = inputFile.header().dataWindow();
-    properties.dimensions.x = dataWindow.max.x - dataWindow.min.x + 1;
-    properties.dimensions.y = dataWindow.max.y - dataWindow.min.y + 1;
-    properties.drawDataMin = {dataWindow.min.x, dataWindow.min.y};
+    const Imath::Box2i& dataWindow = inputFile.header().dataWindow();
+    properties.dataWindowMin = {dataWindow.min.x, dataWindow.min.y};
+    properties.dataWindowMax = {dataWindow.max.x, dataWindow.max.y};
+
+    const Imath::Box2i& displayWindow = inputFile.header().displayWindow();
+    properties.displayWindowMin = {displayWindow.min.x, displayWindow.min.y};
+    properties.displayWindowMax = {displayWindow.max.x, displayWindow.max.y};
+
     properties.mips = inputFile.numLevels();
 
-    std::vector<Imf::FrameBuffer> frameBuffers(properties.mips);
-    int frameBufferCount = 0;
-
-    frameBufferCount = extractAllLayouts(properties, part, frameBuffers, textureAllocator);
+    extractAllLayouts(properties, part, textureAllocator);
 
     for(const View& view : part.views)
     {
         part.totalSubViews += static_cast<int>(view.subViewLayouts.size());
     }
 
-    if(frameBufferCount == 0)
+    if(part.totalSubViews == 0)
     {
         setError(TextureImportError::UnsupportedFeature, "Currently only R, G, B, and A channels are supported.");
         return;
     }
+
+    textureAllocator.preAllocation(1);
+    if(allocateTextures(properties, part, 0, textureAllocator) == 0)
+    {
+        return;
+    }
+    textureAllocator.postAllocation();
+
+    std::vector<Imf::FrameBuffer> frameBuffers(properties.mips);
+    fillFrameBuffers(properties, part, frameBuffers, textureAllocator);
 
     for(int mip = 0; mip < properties.mips; ++mip)
     {
@@ -793,15 +865,15 @@ void ExrOpenExrImporter::loadTiledImage(Imf::StdIStream& exrStream, ITextureAllo
 }
 
 bool ExrOpenExrImporter::createTextureForLayout(ITextureAllocator& textureAllocator, int textureIndex,
-                                                ExrOpenExrImporter::SubViewLayout& layout, int width, int height,
-                                                int mips)
+                                                ExrOpenExrImporter::SubViewLayout& layout, const Properties& properties)
 {
     cputex::TextureParams params;
     params.arraySize = 1;
     params.dimension = cputex::TextureDimension::Texture2D;
-    params.extent = cputex::Extent{width, height, 1};
+    params.extent = cputex::Extent{properties.dataWindowMax.x - properties.dataWindowMin.x + 1,
+                                   properties.dataWindowMax.y - properties.dataWindowMin.y + 1, 1};
     params.faces = 1;
-    params.mips = mips;
+    params.mips = properties.mips;
     params.surfaceByteAlignment = 4;
     params.format = getLayoutFormat(layout);
 
@@ -815,11 +887,9 @@ bool ExrOpenExrImporter::createTextureForLayout(ITextureAllocator& textureAlloca
     return true;
 }
 
-int ExrOpenExrImporter::extractAllLayouts(const Properties& properties, Part& part,
-                                          std::span<Imf::FrameBuffer> frameBuffers, ITextureAllocator& textureAllocator)
+void ExrOpenExrImporter::extractAllLayouts(const Properties& properties, Part& part,
+                                           ITextureAllocator& textureAllocator)
 {
-    int frameBufferCount = 0;
-
     static const std::string emptyString;
     assignChannelsToLayouts(part.header.channels(), emptyString, part.views.front().subViewLayouts);
 
@@ -874,56 +944,46 @@ int ExrOpenExrImporter::extractAllLayouts(const Properties& properties, Part& pa
             ++viewNameItr;
         }
     }
+}
 
-    { // pre texture allocation
-        int textureCount = 0;
-        for(View& view : part.views)
+int ExrOpenExrImporter::allocateTextures(const Properties& properties, Part& part, int textureIndexStart,
+                                         ITextureAllocator& textureAllocator)
+{
+    int textureIndex = textureIndexStart;
+
+    for(View& view : part.views)
+    {
+        for(SubViewLayout& subViewLayout : view.subViewLayouts)
         {
-            textureCount += (int)std::ssize(view.subViewLayouts);
-        }
+            if(!createTextureForLayout(textureAllocator, textureIndex, subViewLayout, properties)) { return 0; }
 
-        textureAllocator.preAllocation(textureCount);
+            ++textureIndex;
+        }
     }
 
-    { // texture allocation
-        int textureIndex = 0;
-        for(View& view : part.views)
+    return textureIndex - textureIndexStart;
+}
+
+void ExrOpenExrImporter::fillFrameBuffers(const Properties& properties, Part& part,
+                                          std::span<Imf::FrameBuffer> frameBuffers, ITextureAllocator& textureAllocator)
+{
+    const cputex::Extent textureExtent{properties.dataWindowMax.x - properties.dataWindowMin.x + 1,
+                                       properties.dataWindowMax.y - properties.dataWindowMin.y + 1, 1};
+
+    for(View& view : part.views)
+    {
+        for(SubViewLayout& subViewLayout : view.subViewLayouts)
         {
-            for(SubViewLayout& subViewLayout : view.subViewLayouts)
+            for(int mip = 0; mip < properties.mips; ++mip)
             {
-                if(!createTextureForLayout(textureAllocator, textureIndex, subViewLayout, properties.dimensions.x,
-                                           properties.dimensions.y, properties.mips))
-                {
-                    return 0;
-                }
+                std::span<std::byte> mipData = textureAllocator.accessTextureData(
+                    subViewLayout.textureIndex, MipSurfaceKey{.arraySlice = 0, .face = 0, .mip = (int8_t)mip});
 
-                ++textureIndex;
-            }
-        }
-
-        textureAllocator.postAllocation();
-    }
-
-    { // tetxure fill
-        const cputex::Extent textureExtent{properties.dimensions.x, properties.dimensions.y, 1};
-
-        for(View& view : part.views)
-        {
-            for(SubViewLayout& subViewLayout : view.subViewLayouts)
-            {
-                for(int mip = 0; mip < properties.mips; ++mip)
-                {
-                    std::span<std::byte> mipData = textureAllocator.accessTextureData(
-                        subViewLayout.textureIndex, MipSurfaceKey{.arraySlice = 0, .face = 0, .mip = (int8_t)mip});
-
-                    frameBufferCount += fillFrameBuffer(frameBuffers[mip], properties.drawDataMin, subViewLayout,
-                                                        cputex::calculateMipExtent(textureExtent, mip), mipData);
-                }
+                fillFrameBuffer(frameBuffers[mip], properties.dataWindowMin, subViewLayout,
+                                cputex::calculateMipExtent(textureExtent, mip), mipData);
             }
         }
     }
-
-    return frameBufferCount;
 }
 } // namespace teximp::exr
 
