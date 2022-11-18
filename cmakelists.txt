@@ -18,6 +18,8 @@ find_package(JPEG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(OpenEXR CONFIG REQUIRED)
 find_path(TL_EXPECTED_INCLUDE_DIR NAMES tl/expected.hpp)
+find_package(libjpeg-turbo CONFIG REQUIRED)
+find_package(TIFF REQUIRED)
 
 if(TEXIMP_ADD_GPUFMT)
     add_subdirectory(gpuformat)
@@ -63,13 +65,15 @@ endif(WIN32)
 
 target_include_directories(teximp PUBLIC include
                                   PRIVATE ${GSL_LITE_INCLUDE_DIR}
-                                          ${JPEG_INCLUDE_DIR}
-                                         )
+                                          ${JPEG_INCLUDE_DIR})
 
 target_link_libraries(teximp PUBLIC gpufmt
                                     cputex
                                     ${JPEG_LIBRARIES}
+                                    libjpeg-turbo::jpeg
+                                    libjpeg-turbo::turbojpeg
                                     PNG::PNG
-                                    OpenEXR::OpenEXR)
+                                    OpenEXR::OpenEXR
+                                    ${TIFF_LIBRARIES})
 
 target_compile_features(teximp PUBLIC cxx_std_20)
