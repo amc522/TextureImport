@@ -4,6 +4,9 @@ if(${CMAKE_VERSION} VERSION_LESS 3.12)
     cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
 endif()
 
+option(TEXIMP_ADD_GPUFMT "Add gpuformat as a submodule in textureimport [ON, OFF]" ON)
+option(TEXIMP_ADD_CPUTEX "Add cputexture as a submodule in textureimport [ON, OFF]" ON)
+
 set(VCPKG_MANIFEST_MODE ON)
 set(CPUTEX_ADD_GPUFMT OFF)
 
@@ -16,8 +19,13 @@ find_package(PNG REQUIRED)
 find_package(OpenEXR CONFIG REQUIRED)
 find_path(TL_EXPECTED_INCLUDE_DIR NAMES tl/expected.hpp)
 
-add_subdirectory(gpuformat)
-add_subdirectory(cputexture)
+if(TEXIMP_ADD_GPUFMT)
+    add_subdirectory(gpuformat)
+endif(TEXIMP_ADD_GPUFMT)
+
+if(TEXIMP_ADD_CPUTEX)
+    add_subdirectory(cputexture)
+endif(TEXIMP_ADD_CPUTEX)
 
 add_library(teximp STATIC include/teximp/config.h
                           include/teximp/string.h
