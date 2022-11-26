@@ -20,6 +20,7 @@ public:
     FileFormat fileFormat() const final;
 
 protected:
+    gpufmt::Format selectFormat(ITextureAllocator& textureAllocator, int bitDepth, bool alphaNeeded, bool sRgb);
     bool checkSignature(std::istream& stream) final;
     void load(std::istream& stream, ITextureAllocator& textureAllocator, TextureImportOptions options) final;
 };
