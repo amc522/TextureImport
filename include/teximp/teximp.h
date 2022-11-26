@@ -207,6 +207,7 @@ enum class TextureImportError
 
 enum class FormatLayout
 {
+    Undefined,
     _4_4,
     _4_4_4_4,
     _5_6_5,
@@ -358,5 +359,23 @@ template<class T>
 [[nodiscard]] constexpr std::span<T> castWritableBytes(std::span<std::byte> bytes) noexcept
 {
     return std::span<T>(reinterpret_cast<T*>(bytes.data()), bytes.size_bytes() / sizeof(T));
+}
+
+template<class T>
+[[nodiscard]] constexpr std::span<const T> castBytes(std::span<const std::byte> bytes) noexcept
+{
+    return std::span<const T>(reinterpret_cast<const T*>(bytes.data()), bytes.size_bytes() / sizeof(T));
+}
+
+template<class Container, class T>
+[[nodiscard]] constexpr bool contains(const Container& container, const T& value) noexcept
+{
+    return std::find(std::cbegin(container), std::cend(container), value) != std::cend(container);
+}
+
+template<size_t Extent = std::dynamic_extent>
+[[nodiscard]] constexpr bool isValidFormatLayout(FormatLayout nativeLayout, std::span<const FormatLayout, Extent> additionalLayouts, FormatLayout selectedLayout)
+{
+    return selectedLayout != FormatLayout::Undefined && (selectedLayout == nativeLayout || contains(additionalLayouts, selectedLayout));
 }
 } // namespace teximp
