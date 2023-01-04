@@ -123,7 +123,9 @@ void DdsTexImpImporter::load(std::istream& stream, ITextureAllocator& textureAll
             }
         }
     }
-    else if(mHeader.format.flags & (dds::DDPF_ALPHA | dds::DDPF_ALPHAPIXELS | dds::DDPF_RGB | dds::DDPF_RGBA))
+    else if((mHeader.format.flags & (dds::DDPF_ALPHA | dds::DDPF_ALPHAPIXELS | dds::DDPF_RGB | dds::DDPF_RGBA)) ||
+            (mHeader.format.flags & dds::DDPF_LUMINANCE) ||
+            (mHeader.format.flags & dds::DDPF_LUMINANCE_ALPHA))
     {
         if(mHeader.format.rgbBitCount == 0)
         {
@@ -149,8 +151,16 @@ void DdsTexImpImporter::load(std::istream& stream, ITextureAllocator& textureAll
                 }
             }
         }
+
+        if(srcFormat == gpufmt::Format::UNDEFINED)
+        {
+            setError(TextureImportError::InvalidDataInImage, std::format("Unsupported pixel format. size: {}, flags: {}, fourcc: {}, rgbBitCount: {}, rBitMask: {}, gBitMask: {}, bBitMask: {}, aBitMask: {}",
+                mHeader.format.size, (uint32_t)mHeader.format.flags, mHeader.format.fourCC, mHeader.format.rgbBitCount,
+                mHeader.format.size, mHeader.format.rBitMask, mHeader.format.gBitMask, mHeader.format.bBitMask, mHeader.format.aBitMask));
+
+            return;
+        }
     }
-    else if(mHeader.format.flags & (dds::DDPF_LUMINANCE | dds::DDPF_LUMINANCE_ALPHA)) {}
     else if(mHeader.format.flags & dds::DDPF_BUMPDUDV)
     {
         if(mHeader.format.rgbBitCount == 0)
@@ -185,7 +195,7 @@ void DdsTexImpImporter::load(std::istream& stream, ITextureAllocator& textureAll
         return;
     }
 
-    uint32_t const mips = (mHeader.flags & dds::DDSD_MIPMAPCOUNT) ? mHeader.mipMapCount : 1u;
+    uint32_t const mips = ((mHeader.flags & dds::DDSD_MIPMAPCOUNT) || (mHeader.caps & dds::DDSCAPS_MIPMAP)) ? mHeader.mipMapCount : 1u;
     uint32_t faces = (mHeader.caps2 & dds::DDSCAPS2_CUBEMAP) ? 6u : 1u;
     uint32_t depthCount = (mHeader.caps2 & dds::DDSCAPS2_VOLUME) ? mHeader.depth : 1u;
 
@@ -214,6 +224,9 @@ void DdsTexImpImporter::load(std::istream& stream, ITextureAllocator& textureAll
     auto endPos = stream.tellg();
     stream.seekg(textureDataPos);
 
+    const std::ptrdiff_t textureDataByteSize = endPos - textureDataPos;
+    std::ptrdiff_t bytesRead = 0;
+
     for(cputex::CountType slice = 0; slice < params.arraySize; ++slice)
     {
         for(cputex::CountType face = 0; face < params.faces; ++face)
@@ -236,21 +249,38 @@ void DdsTexImpImporter::load(std::istream& stream, ITextureAllocator& textureAll
 
                 const cputex::Extent mipExtent = cputex::calculateMipExtent(params.extent, mip);
                 cputex::Extent mipBlockExtent = mipExtent / formatInfo.blockExtent;
-                mipBlockExtent = glm::max(mipBlockExtent, {1, 1, 1});
 
-                size_t surfaceSize = mipBlockExtent.x * mipBlockExtent.y * mipBlockExtent.z * formatInfo.blockByteSize;
-                stream.read(reinterpret_cast<char*>(surface.data()), surfaceSize);
+                const auto expectedSurfaceByteSize = ((mipExtent.x + (formatInfo.blockExtent.x - 1)) / formatInfo.blockExtent.x) *
+                    ((mipExtent.y + (formatInfo.blockExtent.y - 1)) / formatInfo.blockExtent.y) *
+                    formatInfo.blockByteSize * mipExtent.z;
+
+                if(expectedSurfaceByteSize > surface.size_bytes())
+                {
+                    setError(TextureImportError::Unknown);
+                    return;
+                }
+
+                stream.read(reinterpret_cast<char*>(surface.data()), expectedSurfaceByteSize);
 
                 if(stream.fail())
                 {
-                    const size_t actualSize = endPos - textureDataPos;
-                    setError(TextureImportError::NotEnoughData,
-                             std::format("Prematurely reached the end of the file. Expected the file to have {} bytes "
-                                         "of texture data, but only had {} bytes.",
-                                         surface.size_bytes(), actualSize));
+                    // Apparently it's ok for mips smaller than the block size to have incomplete data.
+
+                    if(!(formatInfo.isCompressed() &&
+                        mipExtent.x < formatInfo.blockExtent.x &&
+                        mipExtent.y < formatInfo.blockExtent.y))
+                    {
+                        const std::ptrdiff_t bytesRemaining = textureDataByteSize - bytesRead;
+
+                        setError(TextureImportError::NotEnoughData,
+                                 std::format("Prematurely reached the end of the file. Expected surface for slice {}, face {}, mip {} to be {} bytes, but only {} bytes were available.",
+                                             slice, face, mip, expectedSurfaceByteSize, bytesRemaining));
+                    }
 
                     return;
                 }
+
+                bytesRead += expectedSurfaceByteSize;
             }
         }
     }

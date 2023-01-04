@@ -14,7 +14,7 @@ constexpr uint32_t makeFourCC(uint8_t cc0, uint8_t cc1, uint8_t cc2, uint8_t cc3
 
 static constexpr uint32_t DDS_MAGIC = makeFourCC('D', 'D', 'S', ' ');
 
-enum DDPF
+enum DDPF : uint32_t
 {
     DDPF_ALPHAPIXELS = 0x00000001u,
     DDPF_ALPHA = 0x00000002u,
@@ -39,6 +39,8 @@ struct DDS_PIXELFORMAT
     uint32_t bBitMask = 0u;
     uint32_t aBitMask = 0u;
 };
+
+static_assert(sizeof(DDS_PIXELFORMAT) == 32);
 
 enum DDSD
 {

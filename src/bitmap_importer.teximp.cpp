@@ -435,6 +435,32 @@ void BitmapTexImpImporter::loadBitmap(std::istream& stream, ITextureAllocator& t
             mMask.b = mHeader.blueMask;
             mMask.a = mHeader.alphaMask;
         }
+
+        if(mMask.r == 0)
+        {
+            setError(TextureImportError::InvalidDataInImage, "Red mask has a bit mask of 0");
+            return;
+        }
+        else if(mMask.g == 0)
+        {
+            setError(TextureImportError::InvalidDataInImage, "Green channel has a bit mask of 0");
+            return;
+        }
+        else if(mMask.b == 0)
+        {
+            setError(TextureImportError::InvalidDataInImage, "Blue channel has a bit mask of 0");
+            return;
+        }
+        else if(mMask.a == 0 && (mMask.r & mMask.g & mMask.b) != 0)
+        {
+            setError(TextureImportError::InvalidDataInImage, std::format("Overlap in RGB masks. R: {}, G: {}, B: {}", mMask.r, mMask.g, mMask.b));
+            return;
+        }
+        else if(mMask.a > 0 && (mMask.r & mMask.g & mMask.b & mMask.a) != 0)
+        {
+            setError(TextureImportError::InvalidDataInImage, std::format("Overlap in RGBA masks. R: {}, G: {}, B: {}, A: {}", mMask.r, mMask.g, mMask.b, mMask.a));
+            return;
+        }
     }
 
     if(mHeader.compression == BitmapCompression::RGB || useBitfields) { mBytesPerRow = mDataSize / mHeight; }
@@ -483,8 +509,19 @@ void BitmapTexImpImporter::loadBitmap(std::istream& stream, ITextureAllocator& t
             {
                 format = compressed5551Format;
             }
-            else if((mMask.a & 0xffff) > 0) { format = gpufmt::Format::R8G8B8A8_UNORM; }
-            else { format = gpufmt::Format::R8G8B8_UNORM; }
+            else if(glm::bitCount(mMask.r) == 8 && glm::bitCount(mMask.g) == 8 && glm::bitCount(mMask.b) == 8 && glm::bitCount(mMask.a) == 0)
+            {
+                format = gpufmt::Format::R8G8B8_UNORM;
+            }
+            else if(glm::bitCount(mMask.r) == 8 && glm::bitCount(mMask.g) == 8 && glm::bitCount(mMask.b) == 8 && glm::bitCount(mMask.a) == 8)
+            {
+                format = gpufmt::Format::R8G8B8A8_UNORM;
+            }
+            else
+            {
+                setError(TextureImportError::InvalidDataInImage, std::format("Unsupported channel mask. R: {}, G: {}, B: {}, A: {}", mMask.r, mMask.g, mMask.b, mMask.a));
+                return;
+            }
         }
     }
     else if(mHeader.bitsPerPixel == 24)
