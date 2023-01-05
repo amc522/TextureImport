@@ -52,7 +52,6 @@ void JpegLibJpegTurboImporter::load(std::istream& stream, ITextureAllocator& tex
     if(result != 0)
     {
         setError(TextureImportError::CouldNotReadHeader, tjGetErrorStr());
-        tjDestroy(handle);
         return;
     }
 
