@@ -180,7 +180,14 @@ TextureImporterFactory::makeTextureImporter(FileFormat fileFormat, ITextureAlloc
 
     textureImporter->mFilePath = filePath;
     textureImporter->mTextureAllocator = &textureAllocator;
-    textureImporter->load(stream, textureAllocator, options);
+    
+    try
+    {
+        textureImporter->load(stream, textureAllocator, options);
+    }
+    catch(const TextureImporterException&)
+    {
+    }
 
     return textureImporter;
 }

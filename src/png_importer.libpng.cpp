@@ -115,6 +115,11 @@ FileFormat PngLibPngImporter::fileFormat() const
     return FileFormat::Png;
 }
 
+void PngLibPngImporter::setErrorMessageFromLibPng(const char* message)
+{
+    setError(TextureImportError::Unknown, message);
+}
+
 bool PngLibPngImporter::checkSignature(std::istream& stream)
 {
     if(!stream)
@@ -142,9 +147,13 @@ void PngLibPngImporter::load(std::istream& stream, ITextureAllocator& textureAll
                                          { png_destroy_read_struct(&pngRead, &pngInfo, &pngEndInfo); });
 
         pngRead = png_create_read_struct(
-            PNG_LIBPNG_VER_STRING, nullptr,
-            [](png_structp /*pngPtr*/, png_const_charp message) { throw std::exception(message); },
-            [](png_structp /*pngPtr*/, png_const_charp message) { throw std::exception(message); });
+            PNG_LIBPNG_VER_STRING, this,
+            [](png_structp pngPtr, png_const_charp message)
+            {
+                reinterpret_cast<PngLibPngImporter*>(png_get_error_ptr(pngPtr))->setErrorMessageFromLibPng(message);
+                throw TextureImporterException();
+            },
+            [](png_structp pngPtr, png_const_charp message) { /*ignore warnings*/ });
 
         if(pngRead == nullptr)
         {
@@ -256,11 +265,8 @@ void PngLibPngImporter::load(std::istream& stream, ITextureAllocator& textureAll
 
         png_read_image(pngRead, rows.data());
     }
-    catch(const std::exception& exception)
+    catch(const TextureImporterException&)
     {
-        mStatus = TextureImportStatus::Error;
-        mError = TextureImportError::Unknown;
-        mErrorMessage = exception.what();
     }
 }
 } // namespace teximp::png

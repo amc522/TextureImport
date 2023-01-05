@@ -19,6 +19,8 @@ public:
 
     FileFormat fileFormat() const final;
 
+    void setErrorMessageFromLibPng(const char* message);
+
 protected:
     gpufmt::Format selectFormat(ITextureAllocator& textureAllocator, int bitDepth, bool alphaNeeded, bool sRgb);
     bool checkSignature(std::istream& stream) final;

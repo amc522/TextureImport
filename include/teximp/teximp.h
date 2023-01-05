@@ -296,6 +296,8 @@ private:
 
 using DefaultTextureAllocator = CpuTexTextureAllocator;
 
+struct TextureImporterException : std::exception {};
+
 class TextureImporter
 {
 public:
